@@ -31,22 +31,94 @@ const CartProvider: React.FC = ({ children }) => {
   useEffect(() => {
     async function loadProducts(): Promise<void> {
       // TODO LOAD ITEMS FROM ASYNC STORAGE
+      const productsInCart = await AsyncStorage.getItem(
+        'GoMarketplace:products',
+      );
+
+      if (productsInCart) {
+        setProducts([...JSON.parse(productsInCart)]);
+      }
     }
 
     loadProducts();
   }, []);
 
-  const addToCart = useCallback(async product => {
-    // TODO ADD A NEW ITEM TO THE CART
-  }, []);
+  const addToCart = useCallback(
+    async product => {
+      const productExistsInCart = products.find(
+        productInList => productInList.id === product.id,
+      );
 
-  const increment = useCallback(async id => {
-    // TODO INCREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+      let updatedProductsList;
 
-  const decrement = useCallback(async id => {
-    // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+      if (productExistsInCart) {
+        updatedProductsList = products.map(productInList =>
+          productInList.id === product.id
+            ? { ...product, quantity: productInList.quantity + 1 }
+            : productInList,
+        );
+
+        setProducts(updatedProductsList);
+      } else {
+        updatedProductsList = [...products, { ...product, quantity: 1 }];
+
+        setProducts(updatedProductsList);
+      }
+
+      await AsyncStorage.setItem(
+        'GoMarketplace:products',
+        JSON.stringify(updatedProductsList),
+      );
+    },
+    [products],
+  );
+
+  const increment = useCallback(
+    async id => {
+      const updatedProductsList = products.map(productInList =>
+        productInList.id === id
+          ? { ...productInList, quantity: productInList.quantity + 1 }
+          : productInList,
+      );
+
+      setProducts(updatedProductsList);
+
+      await AsyncStorage.setItem(
+        'GoMarketplace:products',
+        JSON.stringify(updatedProductsList),
+      );
+    },
+    [products],
+  );
+
+  const decrement = useCallback(
+    async id => {
+      const updatedProductsList = products.map(productInList =>
+        productInList.id === id && productInList.quantity > 0
+          ? { ...productInList, quantity: productInList.quantity - 1 }
+          : productInList,
+      );
+
+      const [productWithQuantityZero] = updatedProductsList.filter(
+        product => product.quantity < 1,
+      );
+
+      if (productWithQuantityZero) {
+        updatedProductsList.splice(
+          updatedProductsList.indexOf(productWithQuantityZero),
+          1,
+        );
+      }
+
+      setProducts(updatedProductsList);
+
+      await AsyncStorage.setItem(
+        'GoMarketplace:products',
+        JSON.stringify(updatedProductsList),
+      );
+    },
+    [products],
+  );
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
